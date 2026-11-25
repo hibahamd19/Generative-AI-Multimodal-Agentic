@@ -1,0 +1,5 @@
+[project]
+name = "tp5-agent-mcp"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+dependencies = ["langchain>=1,<2", "langgraph>=1,<2", "langchain-groq>=1,<2", "scikit-learn>=1.5,<2", "langchain-community", "langchain-experimental", "langchain-tavily", "langchain-mcp-adapters", "mcp[cli]>=1.12,<2", "langgraph-cli[inmem]", "python-dotenv", "ddgs", "streamlit", "jupyterlab", "chromadb", "open-clip-torch", "torch", "pillow", "pymupdf", "pytest"]

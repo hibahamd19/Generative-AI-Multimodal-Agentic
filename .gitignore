@@ -1,0 +1,11 @@
+**/.env*
+!**/.env.example
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+.pytest_cache/
+.chroma/
+.langgraph_api/
+chroma_pdf/
+data/MNIST/
+household_power_consumption.txt
