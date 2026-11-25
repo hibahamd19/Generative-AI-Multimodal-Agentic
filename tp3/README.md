@@ -1,66 +1,70 @@
-# TP 3 — RAG multimodal et agentique
+﻿# Compte rendu du TP 3 — RAG multimodal et agentique
 
-**Étudiante : Hamdaoui Hiba — 5IADA**
+**Hiba Hamdaoui**
 
-## Objectif
-J’ai développé un assistant capable de rechercher du texte et des images dans l’article *Attention Is All You Need*, puis de répondre aux questions en indiquant ses sources.
+## Introduction
 
-## 0. Préparation du projet
-Le projet utilise UV pour gérer les dépendances. PyMuPDF sert à lire le PDF, CLIP à créer les embeddings, ChromaDB à les stocker et LangGraph à construire l’agent.
+Dans ce TP, j’ai construit un assistant capable de rechercher des passages et des figures dans l’article *Attention Is All You Need*. L’assistant accepte une question en texte, éventuellement accompagnée d’une image, et répond en citant les pages du PDF. Le [notebook du TP](TP_RAG_Multimodal.ipynb) contient le code et les résultats enregistrés.
+
+## Installation
+
+Le projet utilise Python 3.13 et `uv`. Depuis le dossier du TP, exécuter les commandes suivantes.
 
 ```powershell
 uv sync --locked
-uv run --with jupyterlab jupyter lab
+uv run --locked --with jupyterlab jupyter lab
 ```
 
-Le [PDF utilisé](pdfs/attention_is_all_you_need.pdf) est fourni au chemin attendu par le notebook. J’ai exécuté les cellules d’extraction et d’indexation dans l’ordre. Le premier lancement télécharge CLIP. Pour essayer l’agent, le notebook demande une clé API OpenAI via une invite masquée.
+Ouvrir `TP_RAG_Multimodal.ipynb` et exécuter les cellules dans l’ordre. Le notebook lit le [PDF fourni](pdfs/attention_is_all_you_need.pdf). Le premier lancement télécharge les poids de CLIP.
 
-## 1. Extraction du contenu
-Le PDF est parcouru page par page. Le texte est sauvegardé dans des fichiers `.txt` et les images intégrées sont enregistrées dans un dossier séparé. Le numéro de page permet de retrouver leur provenance. Cette méthode ne récupère pas automatiquement les dessins vectoriels ni le texte scanné.
+Pour exécuter les tests de l’agent avec Groq, créer un fichier `.env` à côté du notebook et remplacer la valeur de `GROQ_API_KEY` par sa propre clé.
 
-Dans l’exécution enregistrée, j’ai extrait 15 pages et 3 images.
+```dotenv
+LLM_PROVIDER=groq
+GROQ_API_KEY=votre_cle
+GROQ_MODEL=qwen/qwen3.8-27b
+```
 
-![Exemple d’image extraite](resultats_pdf/bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697/images/page_003_image_128.png)
+Le notebook peut aussi utiliser un serveur Ollama local avec `LLM_PROVIDER=ollama` et un modèle installé, désigné par `OLLAMA_MODEL`. Pour exécuter le test avec une figure, ce modèle doit accepter les images et les appels d’outils.
 
-## 2. Vectorisation avec CLIP
-Le texte est découpé en fragments de 60 tokens avec un chevauchement de 10 tokens pour conserver le contexte. CLIP ViT-B-32 transforme chaque fragment et chaque image en vecteurs dans le même espace. On normalise les vecteurs pour faciliter la comparaison. Le notebook vérifie la norme et la dimension des vecteurs.
+## 1. Extraction du PDF
 
-## 3. Indexation dans ChromaDB
-L’empreinte SHA-256 identifie le document. Les vecteurs sont enregistrés avec le type de contenu, la page et le chemin du fichier. La base est persistante et la réindexation évite les doublons pour le même PDF.
+J’ai utilisé PyMuPDF pour extraire le texte page par page et enregistrer les images intégrées. Les noms des fichiers conservent le numéro de page, ce qui permet de retrouver la source d’un passage ou d’une figure. L’extraction a produit **15 pages de texte et 3 images**.
 
-Résultats enregistrés dans le notebook publié.
+![Architecture du Transformer extraite de la page 3 du PDF](resultats_pdf/bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697/images/page_003_image_128.png)
 
-| Élément | Nombre |
+## 2. Vectorisation et indexation
+
+J’ai découpé le texte en fragments de 60 jetons avec un chevauchement de 10 jetons. CLIP ViT-B/32 encode les fragments et les images en vecteurs normalisés de dimension 512 dans un espace commun. J’ai stocké les vecteurs dans ChromaDB avec le type de contenu, le numéro de page et le chemin de la source. L’empreinte SHA-256 du PDF permet de réindexer le même document sans créer de doublons.
+
+| Contenu | Nombre indexé |
 |---|---:|
-| Pages | 15 |
-| Fragments textuels | 208 |
+| Fragments de texte | 208 |
 | Images | 3 |
-| Total indexé | 211 |
+| Total | 211 |
 
-## 4. Recherche multimodale
-La requête texte ou image est encodée avec CLIP. ChromaDB renvoie les éléments les plus proches selon la similarité cosinus. Le filtre permet de demander uniquement les textes ou les images.
+## 3. Recherche multimodale
 
-Les sorties enregistrées montrent des résultats textuels et visuels avec leur page et leur score. Les figures retrouvées sont visibles dans la sortie de recherche du [notebook](TP_RAG_Multimodal.ipynb).
+ChromaDB classe les résultats par similarité cosinus. Le filtre permet de rechercher uniquement des passages ou des images. Lorsqu’une question est accompagnée d’une image, l’outil effectue les deux recherches et combine leurs classements par fusion des rangs réciproques (RRF).
 
-## 5. Outil de recherche
-La fonction `retriever_tool` encapsule la recherche. Elle accepte une question, un type de résultat et un nombre de résultats. Quand une image accompagne la question, les deux recherches sont combinées par fusion des rangs (RRF). L’outil fournit les textes, les images et leurs références au modèle.
+La recherche « multi-head attention » a retrouvé notamment le passage de la page 5 qui explique le rôle des têtes parallèles. En soumettant une figure déjà indexée, j’ai retrouvé cette même figure en première position avec une similarité de **1,000**.
 
-## 6. Agent ReAct
-Le LLM représente le MIND et le retriever représente le BODY. LangGraph organise le cycle : le modèle choisit une action, l’outil recherche des sources, puis le modèle utilise ces observations pour répondre ou relancer une recherche.
+## 4. Agent ReAct avec LangGraph
 
-```mermaid
-flowchart TD
-    A[Question utilisateur] --> B[MIND : LLM]
-    B --> C{Appel outil ?}
-    C -->|Oui| D[BODY : retriever]
-    D --> B
-    C -->|Non| E[Réponse avec sources]
-```
+J’ai construit un graphe qui alterne entre le modèle de langage et l’outil `retriever_tool`. Le modèle formule une recherche, l’outil renvoie les passages ou figures avec leurs références, puis le modèle peut lancer une autre recherche ou répondre en français. Le notebook affiche les appels d’outil et les sources retrouvées.
 
-## 7. Tests et validation
-Le notebook propose cinq cas : question sur l’attention multi-têtes, recherche de figure, comparaison de deux notions, information absente et question accompagnée d’une image. La trace permet de vérifier les appels à l’outil. Il faut également contrôler la pertinence des sources et les pages citées.
+## 5. Tests de l’agent
 
-Dans l’exécution enregistrée, l’agent n’a pas atteint les scénarios de question-réponse. L’initialisation s’est arrêtée sur une erreur d’import de `ModelRefusalError` dans `langchain_core`. Les résultats documentés concernent donc l’extraction, l’indexation et la recherche.
+Les cinq cas ci-dessous ont produit une réponse et une trace d’appel à l’outil dans le notebook.
+
+| Test | Résultat observé |
+|---|---|
+| Rôle de l’attention multi-têtes | L’agent explique que les têtes peuvent traiter différentes relations en parallèle et cite notamment la page 5. |
+| Recherche de la figure 2 | L’agent retrouve les mécanismes d’attention par produit scalaire mis à l’échelle et d’attention multi-têtes. |
+| Attention multi-têtes et encodage positionnel | L’agent compare le rôle des deux mécanismes à partir des passages récupérés. |
+| Score de GPT-4 sur MMLU | L’agent indique que le score demandé ne figure pas dans l’article. |
+| Identification d’une image fournie | L’agent reconnaît la figure 1, qui représente l’encodeur et le décodeur du Transformer. |
 
 ## Conclusion
-Le système permet de relier le texte et les images à une question documentaire et d’utiliser un agent pour choisir les recherches. Les limites principales sont la longueur des entrées CLIP, la compréhension des figures scientifiques et la nécessité de vérifier les citations.
+
+Ce TP m’a permis d’associer la recherche de passages et de figures à un agent capable de citer ses sources. Les essais couvrent la recherche textuelle, l’identification d’une figure et le traitement d’une question sans réponse dans le PDF. La pertinence des passages, l’interprétation des figures et l’exactitude des citations restent à vérifier dans les réponses générées.
