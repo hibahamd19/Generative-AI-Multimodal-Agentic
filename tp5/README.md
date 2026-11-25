@@ -106,6 +106,14 @@ J’ai ouvert le lien **Studio UI** dans le terminal et sélectionné le graphe 
 ![Trace d’une demande SAV dans LangGraph Studio](captures/testlanggraph.png)
 
 
+## Tests du registre
+
+J’ai vérifié les cas de garantie active, de garantie expirée et de numéro inconnu avec pytest.
+
+```powershell
+uv run pytest -q test_registry.py
+```
+
 ## Bilan
 
 J’ai réalisé un assistant qui traite le dépannage et la vérification de garantie dans une même interface. Avec le notebook et LangGraph Studio, j’ai pu suivre le passage par l’orchestrateur et l’agent spécialisé. La citation du manuel permet de vérifier la réponse de dépannage. Pour la garantie, le statut affiché dépend de la date de la demande et de celle enregistrée dans le registre.

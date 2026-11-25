@@ -1,11 +1,11 @@
-# TP — Les bases de PyTorch
+# TP 1 — Les bases de PyTorch
 
 **Hiba Hamdaoui**  
 **Objectif :** comprendre l'entraînement et l'évaluation des réseaux de neurones avec PyTorch à travers quatre exercices.
 
 ## 1. Régression : prédiction du salaire
 
-Nous avons généré 300 salariés fictifs avec deux variables : l'ancienneté (0 à 20 ans) et l'expertise (1 à 5). Le salaire est calculé à partir de la formule `4000 + 600 × ancienneté + 1500 × expertise + bruit`.
+J’ai généré 300 salariés fictifs avec deux variables : l'ancienneté (0 à 20 ans) et l'expertise (1 à 5). Le salaire est calculé à partir de la formule `4000 + 600 × ancienneté + 1500 × expertise + bruit`.
 
 - Les données sont divisées en 240 exemples d'entraînement et 60 de test.
 - Les entrées sont standardisées avec les statistiques de l'entraînement. Les salaires sont exprimés en milliers de DH pour faciliter l'apprentissage.
@@ -123,11 +123,11 @@ Sur les mêmes 10 000 images de test, le CNN obtient **1,14 point de pourcentage
 
 Les quatre exercices ont été exécutés. Les résultats présentés proviennent des sorties enregistrées dans [le notebook](TP_PyTorch.ipynb). L'entraînement et l'évaluation des deux modèles MNIST se sont déroulés sur CPU.
 
-Pour lancer le TP dans Jupyter ou Google Colab :
+Depuis le dossier `tp1`, j’ai utilisé les dépendances verrouillées du projet.
 
-```bash
-pip install torch torchvision scikit-learn matplotlib notebook
-jupyter notebook
+```powershell
+uv sync --locked
+uv run --with jupyterlab jupyter lab
 ```
 
 Ouvrir `TP_PyTorch.ipynb` et exécuter toutes les cellules. Le premier téléchargement MNIST nécessite Internet. Le notebook affiche les résultats numériques, enregistre les figures dans `captures/` et sauvegarde les poids des modèles MNIST dans `models/`.
